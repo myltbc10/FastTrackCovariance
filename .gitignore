@@ -1,0 +1,68 @@
+# ============================
+# Python
+# ============================
+__pycache__/
+*.py[cod]
+
+# Virtual environments (DO NOT COMMIT)
+.venv/
+venv/
+env/
+ENV/
+
+# ============================
+# Conda
+# ============================
+.conda/
+conda-meta/
+
+# ============================
+# ROOT / C++ build artifacts
+# ============================
+*.so
+*.d
+*.pcm
+*_cxx.*
+*.o
+*.obj
+*.root
+
+# ============================
+# Generated outputs
+# ============================
+results/
+geometry_files/
+geometry/
+output/
+plots/
+
+# Keep empty directories if needed
+!results/.gitkeep
+!geometry_files/.gitkeep
+
+# ============================
+# Data files (generated)
+# ============================
+*.csv
+
+# ============================
+# OS / Editor junk
+# ============================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*~
+
+# ============================
+# ROOT compiled outputs
+# ============================
+geometry_scripts/*.so
+geometry_scripts/*.pcm
+
+# ============================
+# Plots / figures (generated)
+# ============================
+plot_dump/
+*.pdf
