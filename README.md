@@ -56,10 +56,21 @@ CompGeom(45,"GeoIDEA_BASE", "GeoIDEA_VTX", "GeoIDEA_GT", "old", "new", "b", 2., 
 # Run monte carlo
 
 ```
+# Run in base directory
+
 root -l
 .L LoadAll.c
 LoadAll("")
 .L scans/ParameterScan_OptPixel_Lib.C+
 .L scans/runners/Targeted_Scan.C
 Targeted_Scan()
+```
+
+# Python plots
+
+```
+# Run in base directory
+
+source .venv/bin/activate
+python scans/analyze_optpixel_scan.py results/csvs/optpixel_scan.csv
 ```
