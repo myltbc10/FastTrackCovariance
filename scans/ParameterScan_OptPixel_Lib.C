@@ -210,7 +210,6 @@ void RunOptPixelScan(
   // Ensure output directories exist
   gSystem->mkdir("results/csvs", kTRUE);
   gSystem->mkdir("results/plots", kTRUE);
-  gSystem->mkdir("results/logs", kTRUE);
   gSystem->mkdir(geomDir.c_str(), kTRUE);
 
   TRandom3 rng(rngSeed);
