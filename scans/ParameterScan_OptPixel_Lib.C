@@ -1,15 +1,6 @@
-// ParameterScan_OptPixel.C
-// Grid over (r1, rN), Monte Carlo sample intermediate radii for each N (3..6),
-// generate geometry files, evaluate sigma(d0) at 1 GeV and sigma(pT)/pT at 100 GeV.
-//
-// Run:
-//   root -l
-//   .L ParameterScan_OptPixel.C+
-//   ParameterScan_OptPixel();
-//
-// Output:
-//   results/optpixel_scan.csv
-//   geometry_files/optpixel/*.txt
+// ParameterScan_OptPixel_Lib.C
+// Library-only: defines helper functions + RunOptPixelScan(...)
+// Does NOT run anything by itself.
 
 #include <TROOT.h>
 #include <TSystem.h>
@@ -25,6 +16,7 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <limits>
 
 // Pull in your project headers directly (since you have them locally)
 #include "geometry_scripts/SolGeom.h"
@@ -170,57 +162,96 @@ static bool EvaluateGeometryObjectives(const TString& geomFile,
   return std::isfinite(out_d0_1GeV_um) && std::isfinite(out_pt_100GeV_percent);
 }
 
-void ParameterScan_OptPixel() {
-  // Keep your existing workflow available (harmless if already loaded)
-  gROOT->ProcessLine(".L LoadAll.c");
-  gROOT->ProcessLine("LoadAll(\"\")");
+static std::string StripTrailingSlash(std::string s) {
+  while (!s.empty() && (s.back() == '/' || s.back() == '\\')) s.pop_back();
+  return s;
+}
 
-  gSystem->mkdir("results", kTRUE);
-  gSystem->mkdir("geometry_files/optpixel", kTRUE);
+// Fully-parameterized scan
+void RunOptPixelScan(
+    double r1_min_cm,
+    double r1_max_cm,
+    double rN_min_cm,
+    double rN_max_cm,
+    double step_cm,
+    double minSpacing_cm,
+    int samplesPerConfig,
+    const std::vector<int>& layerCounts,
+    double Bfield_T,
+    unsigned int rngSeed,
+    const std::string& csvOutPath,
+    const std::string& geomDirPath,
+    bool doLoadAll
+) {
+  if (doLoadAll) {
+    gROOT->ProcessLine(".L LoadAll.c");
+    gROOT->ProcessLine("LoadAll(\"\")");
+  }
 
-  // Scan settings (cm)
-  const double r1_min = 1.0, r1_max = 5.0;
-  const double rN_min = 10.0, rN_max = 20.0;
-  const double step   = 0.2;
+  if (!(step_cm > 0)) {
+    std::cerr << "[ERROR] step_cm must be > 0\n";
+    return;
+  }
+  if (!(minSpacing_cm > 0)) {
+    std::cerr << "[ERROR] minSpacing_cm must be > 0\n";
+    return;
+  }
+  if (samplesPerConfig <= 0) {
+    std::cerr << "[ERROR] samplesPerConfig must be > 0\n";
+    return;
+  }
+  if (layerCounts.empty()) {
+    std::cerr << "[ERROR] layerCounts is empty\n";
+    return;
+  }
 
-  const double minSpacing = 0.5;  // cm
-  const int samplesPerN   = 50;   // 50 Monte Carlo samples per N per (r1,rN)
+  std::string geomDir = StripTrailingSlash(geomDirPath);
 
-  const double Bfield_T = 2.0;
+  // Ensure output directories exist
+  gSystem->mkdir("results/csvs", kTRUE);
+  gSystem->mkdir("results/plots", kTRUE);
+  gSystem->mkdir("results/logs", kTRUE);
+  gSystem->mkdir(geomDir.c_str(), kTRUE);
 
-  TRandom3 rng(12345);
+  TRandom3 rng(rngSeed);
 
-  std::ofstream out("results/optpixel_scan.csv");
+  std::ofstream out(csvOutPath);
+  if (!out.is_open()) {
+    std::cerr << "[ERROR] Failed to open CSV for writing: " << csvOutPath << "\n";
+    return;
+  }
+
   out << "r1_cm,rN_cm,N,radii_cm,d0_1GeV_um,pt_100GeV_percent,geom_file\n";
   out << std::fixed << std::setprecision(6);
 
   long long nTried = 0, nLogged = 0;
 
-  double best_d0 = 1e99; TString best_d0_file = "";
-  double best_pt = 1e99; TString best_pt_file = "";
+  double best_d0 = std::numeric_limits<double>::infinity();
+  double best_pt = std::numeric_limits<double>::infinity();
+  TString best_d0_file = "";
+  TString best_pt_file = "";
 
-  for (double r1 = r1_min; r1 <= r1_max + 1e-9; r1 += step) {
-    for (double rN = rN_min; rN <= rN_max + 1e-9; rN += step) {
+  for (double r1 = r1_min_cm; r1 <= r1_max_cm + 1e-9; r1 += step_cm) {
+    for (double rN = rN_min_cm; rN <= rN_max_cm + 1e-9; rN += step_cm) {
 
-      // If even N=3 can't fit, skip fast
-      if ((rN - r1) < minSpacing * (3 - 1)) continue;
-
-      for (int N = 3; N <= 6; N++) {
+      for (int N : layerCounts) {
+        if (N < 2) continue;
 
         // Skip infeasible N for this (r1, rN)
-        if ((rN - r1) < minSpacing * (N - 1)) continue;
+        if ((rN - r1) < minSpacing_cm * (N - 1)) continue;
 
-        for (int s = 0; s < samplesPerN; s++) {
+        for (int s = 0; s < samplesPerConfig; s++) {
           nTried++;
 
-          auto radii_cm = SampleRadiiCM(r1, rN, N, minSpacing, rng);
+          auto radii_cm = SampleRadiiCM(r1, rN, N, minSpacing_cm, rng);
           if (radii_cm.empty()) continue;
 
           // Build safe filename WITHOUT destroying ".txt"
           TString base;
           base.Form("OptPix_r1_%0.1f_rN_%0.1f_N%d_s%03d", r1, rN, N, s);
           base.ReplaceAll(".", "p");
-          const TString geomPath = TString("geometry_files/optpixel/") + base + ".txt";
+
+          TString geomPath = TString(geomDir.c_str()) + "/" + base + ".txt";
 
           if (!WriteOptPixelGeometryFile(geomPath, radii_cm)) {
             std::cerr << "Failed to write: " << geomPath << "\n";
@@ -239,6 +270,7 @@ void ParameterScan_OptPixel() {
 
           nLogged++;
 
+          // Keep only best-so-far files for each metric
           bool keep = false;
 
           if (d0_um < best_d0) {
@@ -246,7 +278,6 @@ void ParameterScan_OptPixel() {
             best_d0_file = geomPath;
             keep = true;
           }
-
           if (pt_pct < best_pt) {
             best_pt = pt_pct;
             best_pt_file = geomPath;
@@ -257,14 +288,10 @@ void ParameterScan_OptPixel() {
             gSystem->Unlink(geomPath);
           }
 
-
-          if (d0_um < best_d0) { best_d0 = d0_um; best_d0_file = geomPath; }
-          if (pt_pct < best_pt) { best_pt = pt_pct; best_pt_file = geomPath; }
-
           if (nLogged % 1000 == 0) {
             std::cout << "[Progress] logged=" << nLogged
                       << " tried=" << nTried
-                      << " last r1=" << r1 << " rN=" << rN
+                      << " r1=" << r1 << " rN=" << rN
                       << " N=" << N
                       << " d0=" << d0_um << "um"
                       << " pt=" << pt_pct << "%\n";
@@ -279,7 +306,7 @@ void ParameterScan_OptPixel() {
   std::cout << "\n=== Scan complete ===\n";
   std::cout << "Tried:  " << nTried  << "\n";
   std::cout << "Logged: " << nLogged << "\n";
-  std::cout << "CSV:    results/optpixel_scan.csv\n";
+  std::cout << "CSV:    " << csvOutPath << "\n";
   std::cout << "Best d0@1GeV:   " << best_d0 << " um  @ " << best_d0_file << "\n";
   std::cout << "Best pt@100GeV: " << best_pt << " %   @ " << best_pt_file << "\n";
 }

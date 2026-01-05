@@ -4,7 +4,7 @@
 __pycache__/
 *.py[cod]
 
-# Virtual environments (DO NOT COMMIT)
+# Virtual environments
 .venv/
 venv/
 env/
@@ -22,6 +22,7 @@ conda-meta/
 *.so
 *.d
 *.pcm
+*_ACLiC_*
 *_cxx.*
 *.o
 *.obj
@@ -31,17 +32,15 @@ conda-meta/
 # Generated outputs
 # ============================
 results/
-geometry_files/
-geometry/
 output/
 plots/
+plot_dump/
 
-# Keep empty directories if needed
+# Keep empty results dir if needed
 !results/.gitkeep
-!geometry_files/.gitkeep
 
 # ============================
-# Data files (generated)
+# Data files (generated / large)
 # ============================
 *.csv
 
@@ -54,15 +53,3 @@ Thumbs.db
 .idea/
 *.swp
 *~
-
-# ============================
-# ROOT compiled outputs
-# ============================
-geometry_scripts/*.so
-geometry_scripts/*.pcm
-
-# ============================
-# Plots / figures (generated)
-# ============================
-plot_dump/
-*.pdf

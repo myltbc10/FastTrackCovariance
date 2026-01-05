@@ -52,3 +52,14 @@ CompGeom(45,"GeoIDEA_BASE", "GeoIDEA_VTX", "GeoIDEA_GT", "old", "new", "b", 2., 
 
 
 ```
+
+# Run monte carlo
+
+```
+root -l
+.L LoadAll.c
+LoadAll("")
+.L scans/ParameterScan_OptPixel_Lib.C+
+.L scans/runners/Targeted_Scan.C
+Targeted_Scan()
+```
