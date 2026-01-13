@@ -62,8 +62,8 @@ root -l
 .L LoadAll.c
 LoadAll("")
 .L scans/ParameterScan_OptPixel_Lib.C+
-.L scans/runners/Run_OptPixelScan.C
-Run_OptPixelScan()
+.L scans/runners/Scan1.C
+Initial_Scan()
 ```
 
 # Python plots

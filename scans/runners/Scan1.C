@@ -14,7 +14,7 @@ void RunOptPixelScan(
     const std::string& csvOutPath, const std::string& geomDirPath, bool doLoadAll
 );
 
-void InitialScan() {
+void Initial_Scan() {
   double r1_min_cm = 1.0, r1_max_cm = 5.0;
   double rN_min_cm = 10.0, rN_max_cm = 20.0;
   double step_cm   = 0.2;
